@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rust Ranch — Livestock Tracker</title>
+<style>
+:root { color-scheme: light dark; --bg: light-dark(#f4f5f0,#141914); --panel: light-dark(#ffffff,#1d241e); --panel2: light-dark(#edf1e9,#252e26); --text: light-dark(#20271f,#edf2e9); --muted: light-dark(#687367,#a7b2a4); --line: light-dark(#dce3d7,#354136); --green: #8bbd54; --green2: #b8dc7d; --red:#d97757; --amber:#d6a64d; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; }
+#app { min-height:100vh; width:100%; background:var(--bg); }
+header { padding:24px clamp(16px,4vw,48px); border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:18px; background:var(--panel); }
+.brand { display:flex; gap:13px; align-items:center; }
+.logo { width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:#283b26;color:#c7ef8d;font-size:24px; }
+h1 { margin:0;font-size:clamp(20px,3vw,28px);letter-spacing:-.8px; }
+.sub { color:var(--muted);font-size:13px;margin-top:3px; }
+.header-actions { display:flex;gap:9px;flex-wrap:wrap; }
+button, input, select { font:inherit; }
+button { border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:10px 13px;cursor:pointer;font-weight:650;font-size:13px; }
+button:hover { border-color:var(--green); }
+button.primary { background:var(--green);border-color:var(--green);color:#182016; }
+button.danger { color:var(--red); }
+main { max-width:1440px;margin:auto;padding:26px clamp(16px,4vw,48px) 48px; }
+.eyebrow { color:var(--muted);font-size:11px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase; }
+.intro { display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:22px; }
+.intro h2 { margin:7px 0 5px;font-size:25px;letter-spacing:-.7px; }
+.intro p { margin:0;color:var(--muted);font-size:14px; }
+.stats { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:24px; }
+.stat { padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px; }
+.stat-top { display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px;font-weight:650; }
+.stat-icon { font-size:19px; }
+.stat-num { font-size:30px;font-weight:780;letter-spacing:-1px;margin-top:12px; }
+.stat-note { color:var(--muted);font-size:12px;margin-top:3px; }
+.stat-note.warn { color:var(--amber); }
+.toolbar { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px; }
+.filters { display:flex;gap:8px;flex-wrap:wrap; }
+input, select { background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 12px;color:var(--text);outline:none;min-width:0; }
+input:focus,select:focus { border-color:var(--green); }
+#search { width:min(280px,70vw); }
+.content { display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.8fr);gap:18px;align-items:start; }
+.panel { border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden; }
+.panel-head { display:flex;align-items:center;justify-content:space-between;padding:17px 18px;border-bottom:1px solid var(--line);gap:12px; }
+.panel-head h3 { margin:0;font-size:15px; }
+.panel-head small { color:var(--muted); }
+.livestock-list { display:flex;flex-direction:column; }
+.animal { display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line); }
+.animal:last-child { border-bottom:0; }
+.animal-emoji { width:44px;height:44px;border-radius:12px;background:var(--panel2);display:grid;place-items:center;font-size:23px; }
+.animal-name { font-weight:750;font-size:14px; }
+.animal-meta { color:var(--muted);font-size:12px;margin-top:4px; }
+.animal-right { display:flex;align-items:center;gap:10px; }
+.status { border-radius:20px;padding:5px 8px;font-size:10px;font-weight:800;letter-spacing:.2px;white-space:nowrap; }
+.status.healthy { background:light-dark(#e2f3d8,#283f26);color:light-dark(#3d702a,#b5e99b); }
+.status.watch { background:light-dark(#fff0d4,#463923);color:light-dark(#956719,#f2cd80); }
+.status.critical { background:light-dark(#fbe2dc,#4a2b27);color:light-dark(#a6412b,#ffb2a0); }
+.icon-btn { padding:7px 9px; }
+.side-stack { display:flex;flex-direction:column;gap:16px; }
+.activity { padding:0 18px; }
+.activity-item { display:flex;gap:11px;padding:14px 0;border-bottom:1px solid var(--line); }
+.activity-item:last-child { border-bottom:0; }
+.dot { width:9px;height:9px;border-radius:50%;background:var(--green);margin-top:5px;flex-shrink:0; }
+.dot.warn { background:var(--amber); }.dot.red { background:var(--red); }
+.activity-title { font-size:12px;font-weight:700;line-height:1.4; }
+.activity-time { color:var(--muted);font-size:11px;margin-top:4px; }
+.quick-actions { padding:15px;display:grid;grid-template-columns:1fr 1fr;gap:9px; }
+.quick-actions button { display:flex;align-items:center;gap:8px;text-align:left;padding:12px;font-size:12px; }
+.empty { padding:34px 20px;text-align:center;color:var(--muted);font-size:13px; }
+footer { color:var(--muted);font-size:11px;margin-top:22px;text-align:center; }
+.modal-backdrop { position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:16px;z-index:5; }
+.modal-backdrop.open { display:flex; }
+.modal { width:min(520px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 20px 70px #0005; }
+.modal h3 { margin:0 0 6px;font-size:20px; }
+.modal p { color:var(--muted);font-size:13px;margin:0 0 18px; }
+.form-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.field { display:flex;flex-direction:column;gap:6px; }
+.field.full { grid-column:1/-1; }
+.field label { color:var(--muted);font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.7px; }
+.field input,.field select { width:100%; }
+.modal-actions { display:flex;justify-content:space-between;gap:8px;margin-top:20px; }
+.modal-actions-right { display:flex;gap:8px; }
+@media(max-width:900px){.content{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){header{align-items:flex-start}.header-actions{flex-direction:column}.intro{align-items:flex-start;flex-direction:column}.stats{gap:9px}.stat{padding:14px}.stat-num{font-size:25px}.animal{grid-template-columns:38px minmax(0,1fr);padding:13px}.animal-emoji{width:38px;height:38px}.animal-right{grid-column:2;justify-content:space-between}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.panel-head{padding:14px}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+ <div class="brand"><div class="logo">♞</div><div><h1>Rust Ranch</h1><div class="sub">LIVESTOCK COMMAND CENTER · SURVIVE. BREED. THRIVE.</div></div></div>
+ <div class="header-actions"><button id="exportBtn">↧ Export data</button><button class="primary" id="addTop">＋ Add livestock</button></div>
+</header>
+<main>
+ <div class="intro"><div><div class="eyebrow">YOUR COMPOUND AT A GLANCE</div><h2>Ranch overview</h2><p>Keep tabs on your animals, needs, and breeding plans.</p></div><div class="eyebrow" id="todayLabel">SERVER LOG · TODAY</div></div>
+ <section class="stats">
+  <div class="stat"><div class="stat-top">TOTAL LIVESTOCK <span class="stat-icon">🐾</span></div><div class="stat-num" id="totalStat">0</div><div class="stat-note">Animals in your records</div></div>
+  <div class="stat"><div class="stat-top">HEALTHY <span class="stat-icon">✚</span></div><div class="stat-num" id="healthyStat">0</div><div class="stat-note">Marked healthy</div></div>
+  <div class="stat"><div class="stat-top">NEEDS ATTENTION <span class="stat-icon">⚠</span></div><div class="stat-num" id="attentionStat">0</div><div class="stat-note warn">Check their status</div></div>
+  <div class="stat"><div class="stat-top">BREEDING PAIRS <span class="stat-icon">♡</span></div><div class="stat-num" id="breedingStat">0</div><div class="stat-note">Marked for breeding</div></div>
+ </section>
+ <div class="toolbar"><div class="filters"><input id="search" placeholder="⌕  Search name, type, location…" aria-label="Search livestock"><select id="typeFilter" aria-label="Filter by type"><option value="all">All species</option><option>Horse</option><option>Bear</option><option>Wolf</option><option>Chicken</option><option>Pig</option><option>Other</option></select><select id="statusFilter" aria-label="Filter by status"><option value="all">All statuses</option><option>Healthy</option><option>Watch</option><option>Critical</option></select></div><button id="clearFilters">Reset filters</button></div>
+ <div class="content">
+  <section class="panel"><div class="panel-head"><div><h3>Livestock roster</h3><small id="countLabel">0 animals tracked</small></div><button class="primary" id="addRoster">＋ Add animal</button></div><div class="livestock-list" id="animalList"></div></section>
+  <aside class="side-stack">
+   <section class="panel"><div class="panel-head"><h3>Ranch log</h3><small>Latest updates</small></div><div class="activity" id="activityList"></div></section>
+   <section class="panel"><div class="panel-head"><h3>Quick actions</h3></div><div class="quick-actions"><button id="quickAdd">＋ Add livestock</button><button id="logEvent">☷ Log an event</button><button id="showNeeds">⚠ Show needs attention</button><button id="exportQuick">↧ Export roster</button></div></section>
+   <section class="panel"><div class="panel-head"><h3>Ranch notes</h3></div><div style="padding:15px"><textarea id="notes" rows="4" placeholder="Gate codes, pen locations, food runs…" style="width:100%;resize:vertical;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px;color:var(--text);font:inherit;font-size:12px"></textarea><button id="saveNotes" style="margin-top:9px;width:100%">Save notes</button></div></section>
+  </aside>
+ </div>
+ <footer>RUST RANCH · A player-made tracker, not affiliated with Facepunch. Data is saved in this browser when supported.</footer>
+</main>
+</div>
+<div class="modal-backdrop" id="animalModal"><div class="modal"><h3 id="modalTitle">Add livestock</h3><p>Record the details you need to keep your ranch organized.</p><form id="animalForm"><div class="form-grid">
+ <div class="field"><label for="animalName">Name / ID *</label><input id="animalName" required maxlength="50" placeholder="e.g. Chestnut-01"></div>
+ <div class="field"><label for="animalType">Species *</label><select id="animalType"><option>Horse</option><option>Bear</option><option>Wolf</option><option>Chicken</option><option>Pig</option><option>Other</option></select></div>
+ <div class="field"><label for="animalLocation">Pen / Location</label><input id="animalLocation" maxlength="60" placeholder="e.g. North stable"></div>
+ <div class="field"><label for="animalStatus">Status</label><select id="animalStatus"><option>Healthy</option><option>Watch</option><option>Critical</option></select></div>
+ <div class="field"><label for="animalFood">Food / feed note</label><input id="animalFood" maxlength="100" placeholder="e.g. Needs corn"></div>
+ <div class="field"><label for="animalWater">Water / upkeep</label><input id="animalWater" maxlength="100" placeholder="e.g. Trough filled"></div>
+ <div class="field"><label for="animalRole">Role</label><select id="animalRole"><option>General</option><option>Breeding</option><option>Transport</option><option>Guard</option><option>Resource</option></select></div>
+ <div class="field"><label for="animalAge">Age / notes</label><input id="animalAge" maxlength="100" placeholder="Optional notes"></div>
+ </div><div class="modal-actions"><button type="button" id="deleteAnimal" class="danger" style="display:none">Delete</button><div class="modal-actions-right"><button type="button" id="cancelModal">Cancel</button><button type="submit" class="primary">Save animal</button></div></div></form></div></div>
+<div class="modal-backdrop" id="eventModal"><div class="modal"><h3>Log a ranch event</h3><p>Keep a quick record of feeding, breeding, moves, or anything worth remembering.</p><form id="eventForm"><div class="form-grid"><div class="field full"><label for="eventText">Event *</label><input id="eventText" required maxlength="140" placeholder="e.g. Filled water trough at north stable"></div><div class="field full"><label for="eventKind">Category</label><select id="eventKind"><option>General</option><option>Feeding</option><option>Breeding</option><option>Health</option><option>Moved</option><option>Harvest / resources</option></select></div></div><div class="modal-actions"><span></span><div class="modal-actions-right"><button type="button" id="cancelEvent">Cancel</button><button class="primary" type="submit">Add to log</button></div></div></form></div></div>
+<script>
+const KEY='rustRanchLivestock_v1';
+const seedAnimals=[
+ {id:1,name:'Chestnut',type:'Horse',location:'North stable',status:'Healthy',food:'Corn stocked',water:'Trough filled',role:'Transport',age:'Fast runner'},
+ {id:2,name:'Boulder',type:'Bear',location:'Reinforced pen',status:'Watch',food:'Check food stash',water:'Refill trough',role:'Guard',age:'Keep gate secured'},
+ {id:3,name:'Howler-01',type:'Wolf',location:'East enclosure',status:'Healthy',food:'Meat stored',water:'OK',role:'Breeding',age:'Pair candidate'},
+ {id:4,name:'Henhouse A',type:'Chicken',location:'Farm plot',status:'Critical',food:'Low feed',water:'Check water',role:'Resource',age:'Inspect enclosure'}
+];
+let state={animals:seedAnimals,events:[{id:1,text:'Ranch tracker set up',kind:'General',time:Date.now()},{id:2,text:'Boulder needs a quick check',kind:'Health',time:Date.now()-3600000}],notes:'',nextId:5,editId:null};
+try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved&&Array.isArray(saved.animals))state={...state,...saved};}catch(e){}
+const $=id=>document.getElementById(id);const icons={Horse:'🐎',Bear:'🐻',Wolf:'🐺',Chicken:'🐔',Pig:'🐖',Other:'🐾'};
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function render(){const animals=state.animals; $('totalStat').textContent=animals.length;$('healthyStat').textContent=animals.filter(a=>a.status==='Healthy').length;$('attentionStat').textContent=animals.filter(a=>a.status!=='Healthy').length;$('breedingStat').textContent=animals.filter(a=>a.role==='Breeding').length;
+ const q=$('search').value.trim().toLowerCase(),type=$('typeFilter').value,status=$('statusFilter').value;const filtered=animals.filter(a=>(type==='all'||a.type===type)&&(status==='all'||a.status===status)&&[a.name,a.type,a.location,a.role,a.food,a.water].some(x=>(x||'').toLowerCase().includes(q)));
+ $('countLabel').textContent=`${filtered.length} of ${animals.length} animals tracked`;$('animalList').innerHTML=filtered.length?filtered.map(a=>`<div class="animal"><div class="animal-emoji">${icons[a.type]||'🐾'}</div><div><div class="animal-name">${escapeHtml(a.name)}</div><div class="animal-meta">${escapeHtml(a.type)} · ${escapeHtml(a.location||'Location not set')} · ${escapeHtml(a.role||'General')}</div><div class="animal-meta">Feed: ${escapeHtml(a.food||'No note')} · Upkeep: ${escapeHtml(a.water||'No note')}</div></div><div class="animal-right"><span class="status ${a.status.toLowerCase()}">${escapeHtml(a.status.toUpperCase())}</span><button class="icon-btn edit" data-id="${a.id}" aria-label="Edit ${escapeHtml(a.name)}">✎</button></div></div>`).join(''):'<div class="empty">No livestock match these filters.<br>Try changing your search or add an animal.</div>';
+ $('activityList').innerHTML=state.events.length?state.events.slice().sort((a,b)=>b.time-a.time).slice(0,6).map(e=>`<div class="activity-item"><span class="dot ${e.kind==='Health'?'red':e.kind==='Feeding'?'warn':''}"></span><div><div class="activity-title">${escapeHtml(e.text)}</div><div class="activity-time">${escapeHtml(e.kind)} · ${timeAgo(e.time)}</div></div></div>`).join(''):'<div class="empty">No events logged yet.</div>';
+ $('notes').value=state.notes||'';
+ document.querySelectorAll('.edit').forEach(b=>b.addEventListener('click',()=>openAnimal(Number(b.dataset.id))));
+}
+function timeAgo(t){let m=Math.max(0,Math.floor((Date.now()-t)/60000));if(m<1)return 'Just now';if(m<60)return `${m} min ago`;let h=Math.floor(m/60);if(h<24)return `${h} hr ago`;return `${Math.floor(h/24)} d ago`;}
+function openAnimal(id=null){state.editId=id;const a=id?state.animals.find(x=>x.id===id):null;$('animalForm').reset();$('modalTitle').textContent=a?'Edit livestock':'Add livestock';$('deleteAnimal').style.display=a?'inline-block':'none';[['animalName','name'],['animalType','type'],['animalLocation','location'],['animalStatus','status'],['animalFood','food'],['animalWater','water'],['animalRole','role'],['animalAge','age']].forEach(([el,k])=>$(el).value=a?(a[k]||''):({'animalStatus':'Healthy','animalRole':'General'}[el]||''));$('animalModal').classList.add('open');$('animalName').focus();}
+function closeModal(){$('animalModal').classList.remove('open');state.editId=null;}
+function addEvent(text,kind='General'){state.events.push({id:Date.now()+Math.random(),text,kind,time:Date.now()});state.events=state.events.slice(-80);}
+$('addTop').onclick=$('addRoster').onclick=$('quickAdd').onclick=()=>openAnimal();$('cancelModal').onclick=closeModal;$('animalModal').addEventListener('click',e=>{if(e.target===$('animalModal'))closeModal()});
+$('animalForm').addEventListener('submit',e=>{e.preventDefault();const a={name:$('animalName').value.trim(),type:$('animalType').value,location:$('animalLocation').value.trim(),status:$('animalStatus').value,food:$('animalFood').value.trim(),water:$('animalWater').value.trim(),role:$('animalRole').value,age:$('animalAge').value.trim()};if(!a.name)return;if(state.editId){const i=state.animals.findIndex(x=>x.id===state.editId);if(i>=0)state.animals[i]={...state.animals[i],...a};addEvent(`Updated ${a.name}`,'General');}else{a.id=state.nextId++;state.animals.push(a);addEvent(`Added ${a.name} to the roster`,'General');}persist();closeModal();render();});
+$('deleteAnimal').onclick=()=>{const a=state.animals.find(x=>x.id===state.editId);if(a&&confirm(`Remove ${a.name} from your roster?`)){state.animals=state.animals.filter(x=>x.id!==state.editId);addEvent(`Removed ${a.name} from the roster`,'General');persist();closeModal();render();}};
+['search','typeFilter','statusFilter'].forEach(id=>$(id).addEventListener(id==='search'?'input':'change',render));$('clearFilters').onclick=()=>{$('search').value='';$('typeFilter').value='all';$('statusFilter').value='all';render()};
+$('showNeeds').onclick=()=>{$('statusFilter').value='Watch';$('search').value='';render();if(!state.animals.some(a=>a.status==='Watch')){$('statusFilter').value='Critical';render();}};
+$('logEvent').onclick=()=>$('eventModal').classList.add('open');$('cancelEvent').onclick=()=>$('eventModal').classList.remove('open');$('eventModal').addEventListener('click',e=>{if(e.target===$('eventModal'))$('eventModal').classList.remove('open')});$('eventForm').addEventListener('submit',e=>{e.preventDefault();addEvent($('eventText').value.trim(),$('eventKind').value);persist();render();$('eventModal').classList.remove('open');$('eventForm').reset()});
+$('saveNotes').onclick=()=>{state.notes=$('notes').value;persist();$('saveNotes').textContent='Saved ✓';setTimeout(()=>$('saveNotes').textContent='Save notes',1200)};
+function exportData(){const data={app:'Rust Ranch Livestock Tracker',exportedAt:new Date().toISOString(),animals:state.animals,events:state.events,notes:state.notes};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='rust-ranch-data.json';a.click();URL.revokeObjectURL(url)}$('exportBtn').onclick=$('exportQuick').onclick=exportData;
+$('todayLabel').textContent='SERVER LOG · '+new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}).toUpperCase();render();
+</script>
+</body>
+</html>
